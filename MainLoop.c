@@ -1,6 +1,24 @@
 #include <MainLoop.h>
 
 
+#define   currentYear     (2017)
+#define   currentMonth    (6)
+#define   currentDay      (4)
+#define   currentHour     (21)
+#define   currentMinute   (27)
+#define   currentSecond   (15)
+
+rtc_datetime_t    date ={
+
+		currentYear,
+		currentMonth,
+		currentDay,
+		currentHour,
+		currentMinute,
+		currentSecond
+};
+
+
 typedef enum{
 
 	_FALSE,
@@ -10,10 +28,15 @@ typedef enum{
 
 
 
+
+
+
 _BOOL  isLptmrRunning   =  _FALSE;
 _BOOL  isWatchdogKicked =  _FALSE;
 
 
+void RTC_init(void);
+void RTC_AlarmTimeRequest(uin32_t  time_sec);
 void SysWdPet(uint16_t ms);
 void SysWdAdd(uint32_t ms);
 void SysWdDel(void);
@@ -28,6 +51,31 @@ void SysWdDel(void);
 void MainLoop(void)
 {
 
+	//  _time_get_elapsed_ticks(MQX_TICK_STRUCT_PTR);
+	//	_time_get_ticks(MQX_TICK_STRUCT_PTR);
+
+	//	_time_get_elapsed(TIME_STRUCT_PTR);
+	//	_time_get(TIME_STRUCT_PTR);
+
+/*
+	MQX_TICK_STRUCT  tareq_elapsed;
+	MQX_TICK_STRUCT_PTR  ptr;
+	ptr  = &tareq_elapsed;
+
+
+	TIME_STRUCT      TT;
+	TIME_STRUCT_PTR  timy;
+    timy = &TT;
+
+*/
+
+	uint32_t currentSecond;
+
+	RTC_init();
+
+
+	PRINTF("%s %s\r\n", __TIME__ , __DATE__ );
+
 
 	SysWdPet(16);
 	SysWdAdd(1500);
@@ -37,17 +85,19 @@ void MainLoop(void)
 
   while(1)
    {
-        if(isWatchdogKicked == _TRUE)
-        {
-        	PRINTF("our dude was kicked...>>>>>>>>>>>>>>>>>>>>!\r\n");
-        	isWatchdogKicked = _FALSE;
-        }
-        else{
 
-        	PRINTF("Jack shit...!\r\n");
-        }
+	  RTC_DRV_GetDatetime(RTC_IDX, &date);
 
+	  PRINTF(" date=  %d - %d - %d        time = %d:%d:%d \r\n" ,
 
+			               date.year,
+						   date.month,
+						   date.day,
+						   date.hour,
+						   date.minute,
+						   date.second);
+
+      _time_delay(1000);
    }
 
 	
@@ -55,6 +105,35 @@ void MainLoop(void)
 
 
 //------------------------------------------------------------------------
+
+void RTC_init(void)
+{
+
+  SIM->SCGC6 |= SIM_SCGC6_RTC_MASK;  // Access & irq enabled
+
+  RTC_DRV_Init(RTC_IDX);
+  BOARD_InitRtcOsc();
+  RTC_DRV_SetDatetime(RTC_IDX, &date);
+
+ //  NVIC_EnableIRQ(RTC_IRQn);
+ //  NVIC_EnableIRQ(RTC_Seconds_IRQn);
+
+}
+
+
+void RTC_AlarmTimeRequest(uin32_t  time_sec)
+{
+
+	RTC_DRV_GetDatetime(RTC_IDX, &date);
+	RTC_HAL_ConvertDatetimeToSecs(&date, &currentSecond);
+
+	currentSecond += time_sec;
+
+	RTC_HAL_ConvertSecsToDatetime(&currentSecond, date);
+	RTC_DRV_SetAlarm(RTC_IDX, &date, true);
+
+}
+
 
 void SysWdPet(uint16_t ms)
 {
@@ -158,4 +237,14 @@ void WDOG_EWM_IRQHandler(void)
     __enable_irq();
 }
 
+
+void RTC_IRQHandler(void)
+{
+
+}
+
+void RTC_Seconds_IRQHandler(void)
+{
+
+}
 
